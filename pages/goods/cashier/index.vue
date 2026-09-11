@@ -5,10 +5,10 @@
 				<text class="unit">{{$t(`￥`)}}</text>
 				<numberScroll :num='payPriceShow' color="#E93323" width='30' height='50' fontSize='50'></numberScroll>
 			</view>
-			<view class="count-down" v-if="hasPaymentMode">
+			<view class="count-down" v-if="invalidTime">
 				{{$t(`支付剩余时间`)}}：
 				<countDown :is-day="false" :tip-text="' '" :day-text="' '" :hour-text="' : '" :minute-text="' : '"
-					:second-text="' '" :datatime="invalidTime"></countDown>
+					:second-text="' '" :datatime="invalidTime" :key="invalidTime"></countDown>
 			</view>
 		</view>
 		<view class="payment">
@@ -16,9 +16,11 @@
 				{{$t(`支付方式`)}}
 			</view>
 			<view class="item acea-row row-between-wrapper" v-for="(item,index) in cartArr" :key="index"
-				v-show='item.payStatus' @click="payType(item.number || 0, item.value, index)">
+				v-show='item.alwaysEnabled || item.payStatus' @click="payType(item.number || 0, item.value, index)">
 				<view class="left acea-row row-between-wrapper">
-					<view class="iconfont" :class="item.icon"></view>
+					<image v-if="item.value === 'allinpay'" class="pay-icon" src="/static/images/union-pay.svg"
+						mode="aspectFit"></image>
+					<view v-else class="iconfont" :class="item.icon"></view>
 					<view class="text">
 						<view class="name">{{$t(item.name)}}</view>
 						<view class="info" v-if="item.value == 'yue'">
@@ -29,9 +31,8 @@
 				</view>
 				<view class="iconfont" :class="active==index?'icon-xuanzhong11 font-num':'icon-weixuan'"></view>
 			</view>
-			<view class="payment-empty" v-if="!hasPaymentMode">{{$t(`支付系统接入中`)}}</view>
 		</view>
-		<view class="btn" v-if="hasPaymentMode">
+		<view class="btn">
 			<view class="button acea-row row-center-wrapper" @click='goPay(number, paytype)'>{{$t(`确认支付`)}}</view>
 			<view class="wait-pay" @click="waitPay">{{$t(`暂不支付`)}}</view>
 		</view>
@@ -92,7 +93,7 @@
 						"icon": "icon-tonglianzhifu1",
 						value: 'allinpay',
 						title: this.$t(`使用银联支付`),
-						payStatus: 0,
+						alwaysEnabled: true,
 					}, {
 						"name": this.$t(`好友代付`),
 						"icon": "icon-haoyoudaizhifu",
@@ -121,17 +122,12 @@
 				is_gift: 0
 			}
 		},
-		computed: {
-			hasPaymentMode() {
-				return this.cartArr.some(item => item.payStatus);
-			}
-		},
 		watch: {
 			cartArr: {
 				handler(newV, oldValue) {
 					let newPayList = [];
 					newV.forEach((item, index) => {
-						if (item.payStatus) {
+						if (item.alwaysEnabled || item.payStatus) {
 							item.index = index;
 							newPayList.push(item)
 						}
@@ -217,8 +213,6 @@
 					} else {
 						this.cartArr[3].payStatus = 0
 					}
-						//银联支付隐藏
-						this.cartArr[4].payStatus = 0;
 					//好友代付是否开启
 					this.cartArr[5].payStatus = res.data.friend_pay_status || 0;
 					this.getCashierOrder()
@@ -237,7 +231,7 @@
 					this.payPrice = this.payPriceShow = res.data.pay_price
 					this.payPostage = res.data.pay_postage
 					this.offlinePostage = res.data.offline_postage
-					this.invalidTime = res.data.invalid_time
+					this.invalidTime = this.normalizeInvalidTime(res.data.invalid_time)
 					this.cartArr[2].number = res.data.now_money;
 					this.number = Number(res.data.now_money) || 0;
 					this.oid = res.data.oid
@@ -249,6 +243,24 @@
 						title: err
 					})
 				})
+			},
+			normalizeInvalidTime(value) {
+				let deadline = Number(value);
+				if (!Number.isFinite(deadline) || deadline <= 0) return 0;
+
+				// 兼容后端返回毫秒级时间戳
+				if (deadline >= 1000000000000) {
+					deadline = Math.floor(deadline / 1000);
+				}
+
+				const now = Math.floor(Date.now() / 1000);
+				// 小于 30 天的值按“剩余秒数”处理
+				if (deadline <= 30 * 24 * 60 * 60) {
+					return now + Math.floor(deadline);
+				}
+
+				// 无效或已经过期的时间戳不展示倒计时
+				return deadline > now ? Math.floor(deadline) : 0;
 			},
 			payType(number, paytype, index) {
 				this.active = index;
@@ -732,14 +744,6 @@
 			padding-right: 30rpx;
 		}
 
-		.payment-empty {
-			height: 180rpx;
-			line-height: 180rpx;
-			text-align: center;
-			font-size: 30rpx;
-			color: #999;
-		}
-
 		.payment .item:last-child {
 			border-bottom: none;
 		}
@@ -770,6 +774,13 @@
 			font-size: 50rpx;
 			color: #09bb07;
 			margin-right: 28rpx;
+		}
+
+		.payment .item .left .pay-icon {
+			width: 50rpx;
+			height: 50rpx;
+			margin-right: 28rpx;
+			flex-shrink: 0;
 		}
 
 		.payment .item .left .iconfont.icon-zhifubao {
