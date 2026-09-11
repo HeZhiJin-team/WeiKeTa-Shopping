@@ -140,7 +140,7 @@
 					if (err) return this.toast(err);
 					const payload = {
 						channel: 16,
-						business: 32,
+						business: 66,
 						trade_no: this.tradeNo,
 						amount: this.getAmount(),
 						name: this.form.name,
