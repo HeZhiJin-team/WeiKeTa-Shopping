@@ -5,6 +5,9 @@
 				<text class="unit">{{$t(`￥`)}}</text>
 				<numberScroll :num='payPriceShow' color="#E93323" width='30' height='50' fontSize='50'></numberScroll>
 			</view>
+			<view>
+				维科塔商城
+			</view>
 			<view class="count-down" v-if="invalidTime">
 				{{$t(`支付剩余时间`)}}：
 				<countDown :is-day="false" :tip-text="' '" :day-text="' '" :hour-text="' : '" :minute-text="' : '"
