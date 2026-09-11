@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "uniapp-x": {
+      "source": "hairyf/skills",
+      "sourceType": "github",
+      "skillPath": "skills/uniapp-x/SKILL.md",
+      "computedHash": "96d03424e9735599aae8b3dda29764ed96560fcafcb2cfa8764b07244bb6a2a4"
+    }
+  }
+}
